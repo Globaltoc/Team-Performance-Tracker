@@ -1,29 +1,22 @@
+// frontend/pages/Profile.jsx
 import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import api from "../api/api.js";
 import AuthContext from "../auth/AuthProvider.jsx";
 
 export default function Profile() {
   const { user, logout } = useContext(AuthContext);
-  const [profile, setProfile] = useState(user); // local copy
+  const navigate = useNavigate();
+
+  const [message, setMessage] = useState("");
+
+  // 🔹 Password state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [message, setMessage] = useState("");
 
-  // 🔹 Fetch fresh profile on mount
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get("/auth/me");
-        setProfile(res.data);
-      } catch (err) {
-        console.error("Error loading profile:", err);
-      }
-    };
-    fetchProfile();
-  }, []);
-
+  // 🔹 Handle password change
   const handleChangePassword = async (e) => {
     e.preventDefault();
 
@@ -37,8 +30,9 @@ export default function Profile() {
         currentPassword,
         newPassword,
       });
-      setMessage("Password updated successfully. Please login again.");
+      setMessage("Password updated successfully. Redirecting to login...");
       logout();
+      setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
       setMessage("Error updating password. Check your current password.");
     }
@@ -48,15 +42,18 @@ export default function Profile() {
     <Layout>
       <h1 className="text-2xl font-bold mb-6">Profile Settings</h1>
 
-      <div className="bg-white shadow rounded-xl p-6 max-w-lg">
-        <p className="mb-4">
-          <strong>Username:</strong> {profile?.username}
-        </p>
-        <p className="mb-6">
-          <strong>Role:</strong> {profile?.role}
-        </p>
+      <div className="bg-white shadow rounded-xl p-6 max-w-lg space-y-8">
+        {/* 🔹 Show profile info */}
+        <div className="border-b pb-4">
+          <p><strong>Username:</strong> {user?.username}</p>
+          <p><strong>Role:</strong> {user?.role}</p>
+          <p><strong>Department:</strong> {user?.department}</p>
+        </div>
 
+        {/* 🔹 Change Password */}
         <form onSubmit={handleChangePassword} className="space-y-4">
+          <h2 className="text-xl font-semibold">Change Password</h2>
+
           <div>
             <label className="block text-sm font-medium">Current Password</label>
             <input

@@ -13,7 +13,7 @@ router.get("/", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      "SELECT role_id, role_name, description FROM roles ORDER BY role_id ASC"
+      "SELECT role_id, role_name FROM roles ORDER BY role_id ASC"
     );
 
     res.json(result.rows);
@@ -30,13 +30,11 @@ router.post("/", authenticateToken, async (req, res) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    const { role_name, description } = req.body;
+    const { role_name } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO roles (role_name, description)
-       VALUES ($1, $2)
-       RETURNING role_id, role_name, description`,
-      [role_name, description]
+      "INSERT INTO roles (role_name) VALUES ($1) RETURNING role_id, role_name",
+      [role_name]
     );
 
     res.status(201).json(result.rows[0]);
@@ -54,15 +52,14 @@ router.put("/:id", authenticateToken, async (req, res) => {
     }
 
     const { id } = req.params;
-    const { role_name, description } = req.body;
+    const { role_name } = req.body;
 
     const result = await pool.query(
       `UPDATE roles
-       SET role_name = COALESCE($1, role_name),
-           description = COALESCE($2, description)
-       WHERE role_id = $3
-       RETURNING role_id, role_name, description`,
-      [role_name, description, id]
+       SET role_name = COALESCE($1, role_name)
+       WHERE role_id = $2
+       RETURNING role_id, role_name`,
+      [role_name, id]
     );
 
     if (result.rows.length === 0) {

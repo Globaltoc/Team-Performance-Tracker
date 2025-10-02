@@ -1,4 +1,5 @@
 import React from "react";
+import { Pencil, Trash2, RefreshCcw, Check, X } from "lucide-react";
 
 export default function TaskTable({
   tasks,
@@ -8,6 +9,8 @@ export default function TaskTable({
   onApprove,
   onReject,
   onDelete,
+  onEdit,
+  onReassign,
 }) {
   return (
     <div className="overflow-x-auto border rounded-lg">
@@ -37,52 +40,71 @@ export default function TaskTable({
                   {task.due_date ? new Date(task.due_date).toLocaleDateString() : "—"}
                 </td>
                 <td className="p-2 border">{task.status}</td>
+
                 <td className="p-2 border">
-                  {/* Staff or dynamic role can update status */}
-                  {onUpdateStatus && (
-                    <select
-                      value={task.status}
-                      onChange={(e) => onUpdateStatus(task.task_id, e.target.value)}
-                      className="border p-1 rounded mb-1"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                    </select>
-                  )}
-
-                  {/* Department-based approval/reject */}
-                  {onApprove && onReject && (
-                    <div className="flex gap-2 mt-1">
-                      <button
-                        onClick={() => onApprove(task.task_id)}
-                        className="px-2 py-1 bg-green-500 text-white rounded"
+                  <div className="flex gap-2 items-center">
+                    {/* Staff can update their task status */}
+                    {onUpdateStatus && (
+                      <select
+                        value={task.status}
+                        onChange={(e) => onUpdateStatus(task.task_id, e.target.value)}
+                        className="border p-1 rounded"
                       >
-                        Approve
-                      </button>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Ready for QA">Ready for QA</option>
+                      </select>
+                    )}
+
+                    {/* QA Approve/Reject */}
+                    {onApprove && onReject && (
+                      <>
+                        <button
+                          title="Approve Task"
+                          onClick={() => onApprove(task.task_id)}
+                          className="text-green-600 hover:text-green-800"
+                        >
+                          <Check size={18} />
+                        </button>
+                        <button
+                          title="Reject Task"
+                          onClick={() => onReject(task.task_id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <X size={18} />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Admin actions */}
+                    {onEdit && (
                       <button
-                        onClick={() => onReject(task.task_id)}
-                        className="px-2 py-1 bg-red-500 text-white rounded"
+                        title="Edit Task"
+                        onClick={() => onEdit(task)}
+                        className="text-sky-600 hover:text-sky-800"
                       >
-                        Reject
+                        <Pencil size={18} />
                       </button>
-                    </div>
-                  )}
-
-                  {/* Admin or roles without actions */}
-                  {!onUpdateStatus && !onApprove && !onReject && onDelete && (
-                    <span className="text-gray-500">—</span>
-                  )}
-
-                  {/* Delete button for Admin */}
-                  {onDelete && (
-                    <button
-                      onClick={() => onDelete(task.task_id)}
-                      className="ml-2 px-2 py-1 bg-red-600 text-white rounded"
-                    >
-                      Delete
-                    </button>
-                  )}
+                    )}
+                    {onReassign && (
+                      <button
+                        title="Reassign Task"
+                        onClick={() => onReassign(task)}
+                        className="text-yellow-600 hover:text-yellow-800"
+                      >
+                        <RefreshCcw size={18} />
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        title="Delete Task"
+                        onClick={() => onDelete(task.task_id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))

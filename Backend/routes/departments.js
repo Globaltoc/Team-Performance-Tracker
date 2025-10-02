@@ -13,7 +13,7 @@ router.get("/", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      "SELECT department_id, department_name FROM departments ORDER BY department_id ASC"
+      "SELECT department_id, name AS department_name FROM departments ORDER BY department_id ASC"
     );
 
     res.json(result.rows);
@@ -33,9 +33,9 @@ router.post("/", authenticateToken, async (req, res) => {
     const { department_name } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO departments (department_name)
+      `INSERT INTO departments (name)
        VALUES ($1)
-       RETURNING department_id, department_name`,
+       RETURNING department_id, name AS department_name`,
       [department_name]
     );
 
@@ -58,9 +58,9 @@ router.put("/:id", authenticateToken, async (req, res) => {
 
     const result = await pool.query(
       `UPDATE departments
-       SET department_name = COALESCE($1, department_name)
+       SET name = COALESCE($1, name)
        WHERE department_id = $2
-       RETURNING department_id, department_name`,
+       RETURNING department_id, name AS department_name`,
       [department_name, id]
     );
 
@@ -85,11 +85,11 @@ router.delete("/:id", authenticateToken, async (req, res) => {
     const { id } = req.params;
 
     // Prevent deleting QA department
-    const check = await pool.query("SELECT department_name FROM departments WHERE department_id = $1", [id]);
+    const check = await pool.query("SELECT name FROM departments WHERE department_id = $1", [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: "Department not found" });
     }
-    if (check.rows[0].department_name === "QA") {
+    if (check.rows[0].name === "QA") {
       return res.status(400).json({ error: "Cannot delete QA department" });
     }
 

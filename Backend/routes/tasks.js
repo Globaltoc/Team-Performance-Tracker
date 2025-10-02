@@ -58,7 +58,11 @@ router.post("/", authenticateToken, async (req, res) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    const { title, description, type, due_date, staff_ids } = req.body;
+    const { title, description, type, due_date, assigned_to } = req.body;
+
+    if (!type || !["group", "individual"].includes(type)) {
+      return res.status(400).json({ error: "Task type is required and must be 'group' or 'individual'" });
+    }
 
     const taskResult = await pool.query(
       `INSERT INTO tasks (title, description, type, assigned_by, due_date, status, created_at)
@@ -69,8 +73,8 @@ router.post("/", authenticateToken, async (req, res) => {
 
     const task = taskResult.rows[0];
 
-    if (staff_ids && staff_ids.length > 0) {
-      for (const staffId of staff_ids) {
+    if (assigned_to && assigned_to.length > 0) {
+      for (const staffId of assigned_to) {
         await pool.query(
           `INSERT INTO task_assignments (task_id, staff_id, assigned_at)
            VALUES ($1, $2, NOW())`,
@@ -87,6 +91,57 @@ router.post("/", authenticateToken, async (req, res) => {
 });
 
 /**
+ * UPDATE a task (Admin only - edit or reassign)
+ */
+router.put("/:id", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== "Admin") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const { id } = req.params;
+    const { title, description, due_date, status, type, assigned_to } = req.body;
+
+    if (type && !["group", "individual"].includes(type)) {
+      return res.status(400).json({ error: "Invalid task type" });
+    }
+
+    const result = await pool.query(
+      `UPDATE tasks
+       SET title = COALESCE($1, title),
+           description = COALESCE($2, description),
+           due_date = COALESCE($3, due_date),
+           status = COALESCE($4, status),
+           type = COALESCE($5, type)
+       WHERE task_id = $6
+       RETURNING *`,
+      [title, description, due_date, status, type, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    // reassign staff if provided
+    if (assigned_to) {
+      await pool.query(`DELETE FROM task_assignments WHERE task_id=$1`, [id]);
+      for (const staffId of assigned_to) {
+        await pool.query(
+          `INSERT INTO task_assignments (task_id, staff_id, assigned_at)
+           VALUES ($1, $2, NOW())`,
+          [id, staffId]
+        );
+      }
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error updating task:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/**
  * UPDATE task status (Staff can mark In Progress, move to Ready for QA)
  */
 router.put("/:id/status", authenticateToken, async (req, res) => {
@@ -94,7 +149,6 @@ router.put("/:id/status", authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Staff can only update their assigned tasks
     if (req.user.role === "Staff") {
       const check = await pool.query(
         `SELECT * FROM task_assignments WHERE task_id=$1 AND staff_id=$2`,
@@ -116,7 +170,7 @@ router.put("/:id/status", authenticateToken, async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (err) {
-    console.error("Error updating task:", err);
+    console.error("Error updating task status:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
